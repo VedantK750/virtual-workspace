@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WS Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <script>
+        let ws = new WebSocket("ws://127.0.0.1:8000/ws");
+
+        ws.onopen = () => {
+            console.log("Connected!");
+        };
+
+        ws.onmessage = (event) => {
+            console.log("Received:", event.data);
+        };
+    </script>
+</body>
+</html>
