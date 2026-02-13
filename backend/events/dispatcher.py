@@ -34,7 +34,8 @@ class EventDispatcher:
             return {
             "type": WORLD_STATE,
             "payload": {
-                "players": snapshot
+                "players": snapshot,
+                "your_id" : event.user_id
             }
         }
 

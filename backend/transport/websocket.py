@@ -57,7 +57,16 @@ async def websocket_endpoint(websocket: WebSocket):
     
     if response:
         # player JOINED so broadcast
-        await manager.broadcast(response)
+        await manager.send_to(user_id,response)
+        
+        snapshot = world.get_room_snapshot("default")
+        
+        await manager.broadcast({
+            "type": "WORLD_STATE",
+            "payload": {
+                "players": snapshot
+            }
+        })
     
     try:
         while True:
