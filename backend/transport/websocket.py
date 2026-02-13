@@ -3,7 +3,7 @@ import json
 import uuid
 
 from backend.events.dispatcher import EventDispatcher, Event
-from backend.events.event_types import JOIN, WORLD_STATE, LEAVE
+from backend.events.event_types import JOIN, WORLD_STATE, LEAVE, SWITCH_ROOM
 from backend.domain.world import World
 
 class ConnectionManager:
@@ -78,6 +78,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await manager.connect(websocket, user_id, room_id)
     
+    world.add_player(user_id, room_id=room_id)
+
     join_event = Event(JOIN, user_id, {"room_id": room_id})
     # JSON response after JOIN by the dispatcher
     response = dispatcher.handle_event(join_event)
@@ -106,7 +108,37 @@ async def websocket_endpoint(websocket: WebSocket):
                 user_id=user_id,
                 payload=json_data.get("payload", {})
             )
-            
+            if event.type == SWITCH_ROOM:
+                old_room = world.player_room.get(user_id)
+                # record the response
+                response = dispatcher.handle_event(event)
+                if not response:
+                    continue
+                # ROOM_SWITCH_SUCCESS has room_id in payload!
+                new_room = event.payload.get("room_id")
+                
+                # Update transport mapping
+                manager.room_connections[old_room].discard(user_id)
+                if new_room not in manager.room_connections:
+                    manager.room_connections[new_room] = set()
+                manager.room_connections[new_room].add(user_id)
+
+                # Send success privately
+                await manager.send_to(user_id, response)
+                
+                # Update OLD room (remove player visually)
+                await manager.broadcast_to_room(
+                    old_room,
+                    dispatcher._build_world_state(old_room)
+                )
+
+                # Update NEW room (add player visually)
+                await manager.broadcast_to_room(
+                    new_room,
+                    dispatcher._build_world_state(new_room)
+                )
+                continue
+
             response = dispatcher.handle_event(event)
             
             if response:

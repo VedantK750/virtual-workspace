@@ -22,7 +22,7 @@ let myId = null;
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    if (data.type === "JOIN") {
+    if (data.type === "JOIN_SUCCESS") {
         myId = data.payload.your_id;
 
         players = {};
@@ -46,6 +46,13 @@ ws.onmessage = (event) => {
         // update whenever there is a state change
         updateProximity();
 
+    if (data.type === "ROOM_SWITCH_SUCCESS") {
+        players = {};
+        data.payload.players.forEach(player => {
+        players[player.id] = player;
+        });
+        updateProximity();
+    }
     }
 };
 
@@ -93,6 +100,23 @@ document.addEventListener("keydown", (e) => {
         }
     }));
 });
+
+
+function switchRoom(roomId) {
+    ws.send(JSON.stringify({
+        type: "SWITCH_ROOM",
+        payload: { room_id: roomId }
+    }));
+}
+    
+
+
+
+
+
+
+
+
 
 // implementing proximity client-side (for now)
 function updateProximity() {
