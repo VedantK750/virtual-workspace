@@ -24,17 +24,26 @@ class Event:
 class EventDispatcher:
     def __init__(self, world: World):
         self.world = world
+        
+    def _build_world_state(self, room_id: str):
+        snapshot = self.world.get_room_snapshot(room_id)
+        return {
+            "type": WORLD_STATE,
+            "payload": {
+                "players": snapshot
+            }
+        }
     
     def handle_event(self, event: Event):
         if event.type == JOIN:
-            self.world.add_player(event.user_id)
+            room_id = event.payload.get("room_id", "default")
+            self.world.add_player(event.user_id, room_id=room_id)
+            print("World mapping after JOIN:", self.world.player_room)
             
-            snapshot = self.world.get_room_snapshot("default")
-
             return {
             "type": WORLD_STATE,
             "payload": {
-                "players": snapshot,
+                "players": self.world.get_room_snapshot(room_id),
                 "your_id" : event.user_id
             }
         }
@@ -49,25 +58,16 @@ class EventDispatcher:
 
             self.world.move_player(event.user_id, x, y)
             
-            snapshot = self.world.get_room_snapshot("default")   
-            
-            return {
-            "type": WORLD_STATE,
-            "payload": {
-                "players": snapshot
-            }
-        }
-
-
+            room_id = self.world.player_room[event.user_id]
+            return self._build_world_state(room_id)
 
         if event.type == LEAVE:
             self.world.remove_player(event.user_id)
-            snapshot = self.world.get_room_snapshot("default")
-
-            return {
-            "type": WORLD_STATE,
-            "payload": {"players": snapshot}
-            }
+            
+            room_id = self.world.player_room[event.user_id]
+            return self._build_world_state(room_id)
+        
+        return None
         
 def main():
     world = World()
